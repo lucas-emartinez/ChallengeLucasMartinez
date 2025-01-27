@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - kafka
+    environment:
+      - REDIS_ADDR=redis:6379
+      - KAFKA_BROKERS=kafka:9092
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: go run ./cmd/worker/main.go  # Aquí cambiamos el archivo main.go que se ejecuta
+    depends_on:
+      - kafka
+      - redis
+    environment:
+      - REDIS_ADDR=redis:6379
+        - KAFKA_BROKERS=kafka:9092
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: go run ./cmd/consumer/main.go  # Aquí cambiamos el archivo main.go que se ejecuta
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+volumes:
+  redis_data:
