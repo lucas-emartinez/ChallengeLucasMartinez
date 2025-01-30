@@ -25,9 +25,22 @@ func (h *TweetHandler) PostTweet(c *fiber.Ctx) error {
 		Content string `json:"content"`
 	}
 
+	// Algunos controles
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
+		})
+	}
+
+	if len(request.Content) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Content is required",
+		})
+	}
+
+	if len(request.Content) > 140 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Content is too long",
 		})
 	}
 

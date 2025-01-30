@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"ChallengeUALA/internal/domain"
 	"github.com/go-redis/redis/v8"
@@ -38,11 +39,16 @@ func (r *RedisRepository) AddToTimeline(ctx context.Context, userID string, twee
 		return fmt.Errorf("error adding tweet to timeline: %w", err)
 	}
 
-	// Limitar el tamaño de la lista para evitar que crezca indefinidamente
-	// Por ejemplo, mantener solo los últimos 1000 tweets
-	err = r.client.ZRemRangeByRank(ctx, "timeline:"+userID, 0, -1001).Err()
+	// Limitamos el timeline a los últimos 500 tweets
+	err = r.client.ZRemRangeByRank(ctx, "timeline:"+userID, 0, -501).Err()
 	if err != nil {
 		return fmt.Errorf("error trimming timeline: %w", err)
+	}
+
+	// expiración en 7 días
+	err = r.client.Expire(ctx, "timeline:"+userID, 7*24*time.Hour).Err()
+	if err != nil {
+		return fmt.Errorf("error setting expiration: %w", err)
 	}
 
 	return nil
@@ -50,6 +56,7 @@ func (r *RedisRepository) AddToTimeline(ctx context.Context, userID string, twee
 
 func (r *RedisRepository) GetTimeline(ctx context.Context, userID string) ([]*domain.Tweet, error) {
 	// le devuelvo los últimos 100 tweets del timeline
+	fmt.Println("Getting Timeline: ", userID)
 	tweetsJSON, err := r.client.ZRevRange(ctx, "timeline:"+userID, 0, 99).Result()
 	if err != nil {
 		return nil, fmt.Errorf("error getting timeline: %w", err)

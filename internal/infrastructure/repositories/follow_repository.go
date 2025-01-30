@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"sync"
 )
 
@@ -14,6 +16,7 @@ type FollowRepository struct {
 // FollowRepository crea una nueva instancia de FollowRepository
 func NewFollowRepository() *FollowRepository {
 	return &FollowRepository{
+		mu:      sync.RWMutex{},
 		follows: make(map[string]map[string]bool),
 	}
 }
@@ -35,17 +38,29 @@ func (r *FollowRepository) IsFollowing(ctx context.Context, followerID, followed
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if r.follows[followerID] == nil {
-		return false, nil
+	followsForFollower, ok := r.follows[followerID] // Obtener el mapa interno y verificar si existe
+	if !ok {
+		return false, nil // Si no existe la entrada para el seguidor, no sigue a nadie
 	}
-	return r.follows[followerID][followedID], nil
+
+	isFollowing, ok := followsForFollower[followedID] // Obtener el valor y verificar si existe
+	if !ok {
+		return false, nil // Si no existe la entrada para el seguido, no lo sigue
+	}
+
+	return isFollowing, nil // Si existen ambas entradas, retornar el valor
 }
 
 // GetFollowers devuelve los seguidores de un usuario.
 func (r *FollowRepository) GetFollowers(ctx context.Context, userID string) ([]string, error) {
+	log.Println("Getting followers oon repository")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
+	log.Println("UserID: ", userID)
+	if r.follows == nil {
+		return nil, fmt.Errorf("follows map is uninitialized")
+	}
+	log.Println("Follows: ", r.follows)
 	var followers []string
 	for followerID, followed := range r.follows {
 		if followed[userID] {

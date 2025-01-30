@@ -1,4 +1,4 @@
-package messaging
+package consumer
 
 import (
 	"ChallengeUALA/internal/platform/config"
@@ -14,8 +14,7 @@ type KafkaConsumer struct {
 func NewKafkaConsumer(kafkaConfig config.KafkaConfig) *KafkaConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: kafkaConfig.Brokers,
-		Topic:   "tweet_events",
-		GroupID: "timeline_group",
+		Topic:   kafkaConfig.Topic,
 	})
 
 	return &KafkaConsumer{

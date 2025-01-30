@@ -9,7 +9,7 @@ import (
 // Message representa un mensaje que puede ser almacenado en la DLQ
 type Message struct {
 	ID        string
-	Body      string
+	Body      []byte
 	Timestamp time.Time
 	Error     error
 }
@@ -24,7 +24,7 @@ type DLQ struct {
 // NewDLQ crea una nueva instancia de DLQ
 func NewDLQ() *DLQ {
 	return &DLQ{
-		messages: make([]Message, 100),
+		messages: make([]Message, 0),
 	}
 }
 
@@ -42,7 +42,7 @@ func (d *DLQ) StoreEvent(ctx context.Context, eventType string, payload []byte) 
 	// Uso el tipo de evento como el ID del mensaje
 	msg := Message{
 		ID:        eventType,
-		Body:      string(payload),
+		Body:      payload,
 		Timestamp: time.Now(),
 	}
 

@@ -38,11 +38,16 @@ func NewTweetService(
 // PostTweet crea un nuevo tweet y lo guarda en la base de datos (En este caso, en memoria, pero sería POSTGRES)
 // También envía un evento a Kafka para notificar que se creó un nuevo tweet.
 func (s *TweetService) PostTweet(ctx context.Context, userID, content string) error {
-	tweet, err := domain.NewTweet(userID, content)
-	if err != nil {
-		return fmt.Errorf("error creating tweet: %w", err)
+
+	if len(content) > 280 {
+		return fmt.Errorf("tweet content is too long")
 	}
 
+	if len(content) == 0 {
+		return fmt.Errorf("tweet content is empty")
+	}
+
+	tweet := domain.NewTweet(userID, content)
 	if err := s.tweetRepo.Save(ctx, tweet); err != nil {
 		return fmt.Errorf("error saving tweet: %w", err)
 	}
@@ -56,13 +61,8 @@ func (s *TweetService) PostTweet(ctx context.Context, userID, content string) er
 		const maxRetries = 3
 		for i := 0; i < maxRetries; i++ {
 
-			serializedTweet, err := json.Marshal(tweet)
-			if err != nil {
-				s.logger.Printf("Error serializing tweet: %v", err)
-				return
-			}
-
-			err = s.eventProducer.PublishEvent(eventCtx, userID, serializedTweet)
+			serializedTweet, _ := json.Marshal(tweet)
+			err := s.eventProducer.PublishEvent(eventCtx, userID, serializedTweet)
 			if err == nil {
 				s.logger.Printf("Tweet event published")
 				return
@@ -75,11 +75,8 @@ func (s *TweetService) PostTweet(ctx context.Context, userID, content string) er
 		}
 
 		// Si falla después de reintentos, guardar en DLQ
-		payload, err := json.Marshal(tweet)
-		if err != nil {
-			s.logger.Printf("Error marshalling tweet: %v", err)
-			return
-		}
+		// Un marshall a una struct no deberia fallar siempre y cuando la struct sea correcta
+		payload, _ := json.Marshal(tweet)
 
 		if err := s.deadLetterQueue.StoreEvent(ctx, "tweet_events", payload); err != nil {
 			s.logger.Printf("Error storing event in DLQ: %v", err)
