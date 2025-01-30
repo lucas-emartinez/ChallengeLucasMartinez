@@ -1,36 +1,15 @@
-# Build stage
-FROM golang:1.23.5-alpine AS builder
-
+FROM golang:1.23.5 AS builder
 WORKDIR /app
 
-# Copy dependency files
 COPY go.mod go.sum ./
-RUN go mod tidy
+RUN go mod download
 
-# Copy all source code and start.sh
+# Copia todo el proyecto, no solo el directorio cmd/api
 COPY . .
-COPY start.sh ./start.sh
 
-# Build the applications
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/api ./cmd/api/main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/worker ./cmd/worker/main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/consumer ./cmd/consumer/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o api ./cmd/api
 
-# Final stage
-FROM alpine:latest
-
-WORKDIR /app
-
-# Copy binaries and start.sh
-COPY --from=builder /app/bin/api /app/api
-COPY --from=builder /app/bin/worker /app/worker
-COPY --from=builder /app/bin/consumer /app/consumer
-COPY --from=builder /app/start.sh /app/start.sh
-
-# Make sure start.sh is executable
-RUN chmod +x /app/start.sh
-
-EXPOSE 8080
-
-# Use full path to start.sh
-CMD ["/app/start.sh"]
+FROM gcr.io/distroless/base-debian11
+WORKDIR /
+COPY --from=builder /app/api .
+ENTRYPOINT ["/api"]

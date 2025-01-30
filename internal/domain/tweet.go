@@ -13,11 +13,11 @@ type Tweet struct {
 	CreatedAt time.Time
 }
 
-func NewTweet(userID, content string) (*Tweet, error) {
+func NewTweet(userID, content string) *Tweet {
 	return &Tweet{
-		ID:        uuid.New().String(),
+		ID:        uuid.NewString(),
 		UserID:    userID,
 		Content:   content,
 		CreatedAt: time.Now().UTC(),
-	}, nil
+	}
 }
