@@ -56,5 +56,4 @@ La API expone los siguientes endpoints en `localhost:8080`:
 
 ## Se dejó en el root la colección de Postman para probar los endpoints
 
-
-
+La idea sería ejecutar primero el Follow, luego publicar el Tweet desde el usuario seguido y como paso final ver el el tmeline del usuario follower.
